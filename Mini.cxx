@@ -21,60 +21,60 @@ std::map<int, std::vector<int> > Group;
 //========================================================================
 double H(const double *xx)
 {
-  const double M     = xx[0];
-  const double K1    = xx[1];
-  const double K2    = xx[2];
-  const double Phi   = xx[3];
-  const double Alpha = xx[4];
+  const double Ms     = xx[0];
+  const double K1     = xx[1];
+  const double K2     = xx[2];
+  const double Phi_H  = xx[3];
+  const double Phi_eq = xx[4];
 
-  const double Eq1   = -1/(M*sin(Phi-Alpha));
-  const double Eq2   = (4*M_PI*M*M-2*K1-4*K2)*cos(Phi)*sin(Phi);
-  const double Eq3   = 4*K2*cos(Phi)*sin(Phi)*sin(Phi)*sin(Phi);
+  const double Eq1   = 1/(sin(Phi_H-Phi_eq));
+  const double Eq2   = (4*M_PI*Ms*Ms-2*K1-4*K2)*sin(Phi_eq)*cos(Phi_eq);
+  const double Eq3   = 4*K2*cos(Phi_eq)*sin(Phi_eq)*sin(Phi_eq)*sin(Phi_eq);
 
   return Eq1*(Eq2+Eq3);
 }
 
 double H1(const double *xx)
 {
-  const double M     = xx[0];
-  const double K1    = xx[1];
-  const double K2    = xx[2];
-  const double Phi   = xx[3];
-  const double Alpha = xx[4];
+  const double Ms     = xx[0];
+  const double K1     = xx[1];
+  const double K2     = xx[2];
+  const double Phi_H  = xx[3];
+  const double Phi_eq = xx[4];
 
-  const double Eq1   = -1/(M*sin(Phi-Alpha));
-  const double Eq2   = (4*M_PI*M*M-2*K1-4*K2)*cos(Phi)*sin(Phi);
-  const double Eq3   = 4*K2*cos(Phi)*sin(Phi)*sin(Phi)*sin(Phi);
-  const double Eq4   = M*cos(Alpha-Phi);
-  const double Eq5   = (4*M_PI*M*M-2*K1-4*K2)*cos(2*Phi);
-  const double Eq6   = 4*K2*(3*sin(Phi)*sin(Phi)*cos(Phi)*cos(Phi)-sin(Phi)*sin(Phi)*sin(Phi)*sin(Phi));
+  const double H_a1 = 2*K1/Ms;
+  const double H_a2 = 4*K2/Ms;
+  const double H_a  = H_a1+H_a2;
 
-  return Eq1*(Eq2+Eq3)*Eq4+Eq5+Eq6;
+  const double Eq1   = H(xx)*cos(Phi_H-Phi_eq);
+  const double Eq2   = (4*M_PI*Ms-H_a)*cos(2*Phi_eq);
+  const double Eq3   = H_a2*(3*sin(Phi_eq)*sin(Phi_eq)*cos(Phi_eq)*cos(Phi_eq)-sin(Phi_eq)*sin(Phi_eq)*sin(Phi_eq)*sin(Phi_eq));
+
+  return Eq1+Eq2+Eq3;
 }
 
 double H2(const double *xx)
 {
-  const double M     = xx[0];
-  const double K1    = xx[1];
-  const double K2    = xx[2];
-  const double Phi   = xx[3];
-  const double Alpha = xx[4];
+  const double Ms      = xx[0];
+  const double K1      = xx[1];
+  const double K2      = xx[2];
+  const double Phi_H   = xx[3];
+  const double Phi_eq  = xx[4];
 
-  const double Eq1   = -1/(M*sin(Phi-Alpha));
-  const double Eq2   = (4*M_PI*M*M-2*K1-4*K2)*cos(Phi)*sin(Phi);
-  const double Eq3   = 4*K2*cos(Phi)*sin(Phi)*sin(Phi)*sin(Phi);
-  const double Eq4   = M*cos(Alpha-Phi);
-  const double Eq5   = (4*M_PI*M*M-2*K1-4*K2)*sin(Phi)*sin(Phi);
-  const double Eq6   = 4*K2*sin(Phi)*sin(Phi)*sin(Phi)*sin(Phi);
+  const double H_a1 = 2*K1/Ms;
+  const double H_a2 = 4*K2/Ms;
+  const double H_a  = H_a1+H_a2;
 
-
-  return Eq1*(Eq2+Eq3)*Eq4-Eq5-Eq6;
+  const double Eq1   = H(xx)*cos(Phi_H-Phi_eq);
+  const double Eq2   = (4*M_PI*Ms-H_a)*sin(Phi_eq)*sin(Phi_eq);
+  const double Eq3   = H_a2*sin(Phi_eq)*sin(Phi_eq)*sin(Phi_eq)*sin(Phi_eq);
+  return Eq1+Eq2+Eq3;
 }
 
 double F(const double *xx)
 {
-  const double M     = xx[0];
-  return 1.76*1e7/(2*M_PI*M)*sqrt(H1(xx)*H2(xx));	
+  const double gamma = 1.75878e7; // 2 * 8.7939E6 rad/(s.Oe)
+  return gamma/(2*M_PI)*sqrt(H1(xx)*H2(xx));	
 }
 
 void HvsF(const double *xx, double *h, double *f){
@@ -110,7 +110,7 @@ void group(){
 
 	int t = Temperature[0];
 	std::vector<int> *pVec = new std::vector<int>;
-	for(int i = 0; i < Temperature.size(); i++){
+	for(uint32_t i = 0; i < Temperature.size(); i++){
 		if(Temperature[i] != t){
 			Group.insert(std::pair<int,std::vector<int> >(t, *pVec));
 			pVec = new std::vector<int>;
