@@ -6,6 +6,7 @@
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/lexical_cast.hpp>
+#include <time.h>
 
 #include "TGraph.h"
 #include "TMarker.h"
@@ -72,12 +73,14 @@ double H2(const double *xx)
   const double Eq1   = H(xx)*cos(Phi_H-Phi_eq);
   const double Eq2   = (4*M_PI*Ms-H_a)*sin(Phi_eq)*sin(Phi_eq);
   const double Eq3   = H_a2*sin(Phi_eq)*sin(Phi_eq)*sin(Phi_eq)*sin(Phi_eq);
-  return Eq1+Eq2+Eq3;
+
+  return Eq1-Eq2-Eq3;
 }
 
 double F(const double *xx)
 {
   const double gamma = 1.75878e7; // 2 * 8.7939E6 rad/(s.Oe)
+  //std::cout << "F H1:" << H1(xx) << " H2: " << H2(xx) << std::endl;
   return gamma/(2*M_PI)*sqrt(H1(xx)*H2(xx));	
 }
 
@@ -114,38 +117,44 @@ double GetPhiFromH(const double *pars, const double hpoint){
 
   phimin->SetMaxFunctionCalls(1000000); 
   phimin->SetMaxIterations(10000);  
-  phimin->SetTolerance(0.001);
+  phimin->SetTolerance(0.1);
   phimin->SetPrintLevel(0);
   phimin->SetFunction(funH);
 
   // min parameters
-  double low = 0.0000001;
+  //double low = M_PI/4;
+  double low = 0.0001;
   double up  = M_PI/2;
-  double minstep[6]    = {0.0,  0.0,  0.0,  0.0,    low,     0.0};
+  double minstep[6]    = {0.0,  0.0,  0.0,  0.0,    0.1,     0.0};
   double startpoint[6] = {Ms,   K1,   K2,   Phi_H,  Phi_eq,  hpoint};
-  int    randomSeed = 100000;
+  int    randomSeed = time(NULL);
 
   TRandom2 r(randomSeed);
-  startpoint[4] = r.Uniform(low,up);
 
-  std::cout << "startpoint of Phi_eq " << startpoint[4] << std::endl;
-  std::cout << "want to fit to H:    " << hpoint << std::endl;
+  while(true){
+	  startpoint[4] = r.Uniform(low,up);
 
-  // Set the free variables to be minimized!
-  phimin->SetVariable(0,"Ms",              startpoint[0], minstep[0]);
-  phimin->SetVariable(1,"K1",              startpoint[1], minstep[1]);
-  phimin->SetVariable(2,"K2",              startpoint[2], minstep[2]);
-  phimin->SetVariable(3,"Phi_H",           startpoint[3], minstep[3]);
-  phimin->SetLimitedVariable(4,"Phi_eq",   startpoint[4], minstep[4], low, up);
-  phimin->SetVariable(5,"hpoint",          startpoint[5], minstep[5]);
+	  std::cout << "startpoint of Phi_eq " << startpoint[4] << std::endl;
+	  std::cout << "want to fit to H:    " << hpoint << std::endl;
+
+	  // Set the free variables to be minimized!
+	  phimin->SetVariable(0,"Ms",              startpoint[0], minstep[0]);
+	  phimin->SetVariable(1,"K1",              startpoint[1], minstep[1]);
+	  phimin->SetVariable(2,"K2",              startpoint[2], minstep[2]);
+	  phimin->SetVariable(3,"Phi_H",           startpoint[3], minstep[3]);
+	  phimin->SetLimitedVariable(4,"Phi_eq",   startpoint[4], minstep[4], low, up);
+	  phimin->SetVariable(5,"hpoint",          startpoint[5], minstep[5]);
 
 
-  // do the minimization
-  phimin->Minimize();
+	  // do the minimization
+	  phimin->Minimize();
 
-  const double *xs = phimin->X();
+	  const double *xs = phimin->X();
 
-  return xs[4];
+	  if(abs(H(xs)-hpoint)<0.1)return xs[4];
+  }
+
+  // return xs[4];
 }
 
 //========================================================================
@@ -244,6 +253,43 @@ void plotdata(){
 
 //========================================================================
 
+void fitphi(int temperature){
+	if(Group.find(temperature)==Group.end()){
+		std::cout << "there is no this temperature in data" << std::endl;
+		return ;
+	}
+	std::vector<int> idx = Group[temperature];
+	std::vector<int>::iterator it;
+
+	const double Ms     = 1258.;
+	const double K1     = 13.2e6;
+	const double K2     = 20.1e3;
+	const double Phi_H  = 0.;
+	const double Phi_eq = M_PI/4;
+
+	std::vector<double> hv;
+	std::vector<double> fv;
+	for(it=idx.begin();it!=idx.end();it++){
+		const double HPoint = Magneticfield[*it];
+
+		const double pars[5] = {Ms,K1,K2,Phi_H,Phi_eq};
+		double phi = GetPhiFromH(pars,HPoint);
+
+		double H,F;
+
+		const double newpars[5] = {Ms,K1,K2,Phi_H,phi};
+		HvsF(newpars, &H,&F);
+		hv.push_back(H);
+		fv.push_back(F);
+
+	}
+
+	for(uint32_t i = 0; i < fv.size(); i++){
+		std::cout << "fitting point H: " << hv[i] << " F: " << fv[i] << std::endl;
+	}
+
+}
+
 int main(int argc, char *argv[]){
 	if(argc != 2){
 		std::cout << "Data file can not be loaded" << std::endl;
@@ -257,22 +303,6 @@ int main(int argc, char *argv[]){
 	//printgroup();
 	plotdata();
 
-	const double Ms     = 1258.;
-	const double K1     = 13.2e6;
-	const double K2     = 20.1e3;
-	const double Phi_H  = 0.;
-	const double Phi_eq = 0.1;
-	const double HPoint = 4000.;
-        const double pars[5] = {Ms,K1,K2,Phi_H,Phi_eq};
-        double phi = GetPhiFromH(pars,HPoint);
-        std::cout << "GetPhiFromH: " << phi << std::endl;
-
-	double H,F;
-
-        const double newpars[5] = {Ms,K1,K2,Phi_H,phi};
-	HvsF(newpars, &H,&F);
-        std::cout << "HvsF H: " << H << " F: " << F << std::endl;
-
-
+	fitphi(300);
 }
 
