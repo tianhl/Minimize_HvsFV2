@@ -31,7 +31,7 @@ double H(const double *xx)
   const double Phi_H  = xx[3];
   const double Phi_eq = xx[4];
 
-  const double Eq1   = 1/(sin(Phi_H-Phi_eq));
+  const double Eq1   = 1/(Ms*sin(Phi_H-Phi_eq));
   const double Eq2   = (4*M_PI*Ms*Ms-2*K1-4*K2)*sin(Phi_eq)*cos(Phi_eq);
   const double Eq3   = 4*K2*cos(Phi_eq)*sin(Phi_eq)*sin(Phi_eq)*sin(Phi_eq);
 
@@ -119,21 +119,24 @@ double GetPhiFromH(const double *pars, const double hpoint){
   phimin->SetFunction(funH);
 
   // min parameters
-  double minstep[6]    = {0.0,  0.0,  0.0,  0.0,    0.0,     0.0};
+  double low = 0.0000001;
+  double up  = M_PI/2;
+  double minstep[6]    = {0.0,  0.0,  0.0,  0.0,    low,     0.0};
   double startpoint[6] = {Ms,   K1,   K2,   Phi_H,  Phi_eq,  hpoint};
   int    randomSeed = 100000;
 
   TRandom2 r(randomSeed);
-  startpoint[4] = r.Uniform(0.000001,M_PI/2);
+  startpoint[4] = r.Uniform(low,up);
 
   std::cout << "startpoint of Phi_eq " << startpoint[4] << std::endl;
+  std::cout << "want to fit to H:    " << hpoint << std::endl;
 
   // Set the free variables to be minimized!
   phimin->SetVariable(0,"Ms",              startpoint[0], minstep[0]);
   phimin->SetVariable(1,"K1",              startpoint[1], minstep[1]);
   phimin->SetVariable(2,"K2",              startpoint[2], minstep[2]);
   phimin->SetVariable(3,"Phi_H",           startpoint[3], minstep[3]);
-  phimin->SetLimitedVariable(4,"Phi_eq",   startpoint[4], minstep[4], 0.000001, M_PI/2);
+  phimin->SetLimitedVariable(4,"Phi_eq",   startpoint[4], minstep[4], low, up);
   phimin->SetVariable(5,"hpoint",          startpoint[5], minstep[5]);
 
 
@@ -255,15 +258,14 @@ int main(int argc, char *argv[]){
 	plotdata();
 
 	const double Ms     = 1258.;
-	const double K1     = 1.3e6;
+	const double K1     = 13.2e6;
 	const double K2     = 20.1e3;
-	const double Phi_H  = 0.1;
+	const double Phi_H  = 0.;
 	const double Phi_eq = 0.1;
 	const double HPoint = 4000.;
         const double pars[5] = {Ms,K1,K2,Phi_H,Phi_eq};
         double phi = GetPhiFromH(pars,HPoint);
         std::cout << "GetPhiFromH: " << phi << std::endl;
-	std::cout << "H: " << H(pars) << std::endl;
 
 	double H,F;
 
