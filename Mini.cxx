@@ -12,6 +12,10 @@
 #include "TCanvas.h"
 #include "TMultiGraph.h"
 
+#include "Math/Functor.h"
+#include "Math/Minimizer.h"
+#include "Math/Factory.h"
+#include "TRandom2.h"
 //========================================================================
 std::vector<int> Temperature;
 std::vector<double> Magneticfield;
@@ -83,7 +87,65 @@ void HvsF(const double *xx, double *h, double *f){
 }
 
 //========================================================================
+double AbsDiffToH(const double *pars)
+{
+  double xx[5] = {pars[0], pars[1], pars[2], pars[3], pars[4]};
+  double hpoint = pars[5];
 
+  return abs(H(xx)-hpoint);
+}
+
+double GetPhiFromH(const double *pars, const double hpoint){
+  double m     = pars[0];  
+  double k1    = pars[1]; 
+  double k2    = pars[2]; 
+  double alpha = pars[3]; 
+
+  double phi   = alpha;
+
+  ROOT::Math::Functor funH(&AbsDiffToH,6); 
+
+  // initialize minimizer
+  const std::string minName = "Minuit2";
+  const std::string algName = "";
+
+  ROOT::Math::Minimizer* phimin = 
+    ROOT::Math::Factory::CreateMinimizer(minName.c_str(), algName.c_str());
+
+  phimin->SetMaxFunctionCalls(1000000); 
+  phimin->SetMaxIterations(10000);  
+  phimin->SetTolerance(0.001);
+  phimin->SetPrintLevel(0);
+  phimin->SetFunction(funH);
+
+  // min parameters
+  double minstep[6]    = {0.0,  0.0,  0.0,  0.1,  0.0,    0.0};
+  double startpoint[6] = {m,    k1,   k2,   phi,  alpha,  hpoint};
+  int    randomSeed = 100;
+
+  TRandom2 r(randomSeed);
+  startpoint[3] = r.Uniform(alpha+0.0001,M_PI/2);
+
+  std::cout << "startpoint of phi " << startpoint[3] << std::endl;
+
+  // Set the free variables to be minimized!
+  phimin->SetVariable(0,"m",     startpoint[0], minstep[0]);
+  phimin->SetVariable(1,"k1",    startpoint[1], minstep[1]);
+  phimin->SetVariable(2,"k2",    startpoint[2], minstep[2]);
+  phimin->SetLimitedVariable(3,"phi",   startpoint[3], minstep[3], alpha+0.0001, M_PI/2);
+  phimin->SetVariable(4,"alpha", startpoint[4], minstep[4]);
+  phimin->SetVariable(5,"hpoint",startpoint[5], minstep[5]);
+
+
+  // do the minimization
+  phimin->Minimize();
+
+  const double *xs = phimin->X();
+
+  return xs[3];
+}
+
+//========================================================================
 void readfile(std::string& datafilename){
 	std::ifstream datafile(datafilename.c_str());
 
