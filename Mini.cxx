@@ -96,12 +96,12 @@ double AbsDiffToH(const double *pars)
 }
 
 double GetPhiFromH(const double *pars, const double hpoint){
-  double m     = pars[0];  
-  double k1    = pars[1]; 
-  double k2    = pars[2]; 
-  double alpha = pars[3]; 
+  double Ms     = pars[0];  
+  double K1     = pars[1]; 
+  double K2     = pars[2]; 
+  double Phi_H  = pars[3]; 
+  double Phi_eq = pars[4]; 
 
-  double phi   = alpha;
 
   ROOT::Math::Functor funH(&AbsDiffToH,6); 
 
@@ -119,22 +119,22 @@ double GetPhiFromH(const double *pars, const double hpoint){
   phimin->SetFunction(funH);
 
   // min parameters
-  double minstep[6]    = {0.0,  0.0,  0.0,  0.1,  0.0,    0.0};
-  double startpoint[6] = {m,    k1,   k2,   phi,  alpha,  hpoint};
-  int    randomSeed = 100;
+  double minstep[6]    = {0.0,  0.0,  0.0,  0.0,    0.0,     0.0};
+  double startpoint[6] = {Ms,   K1,   K2,   Phi_H,  Phi_eq,  hpoint};
+  int    randomSeed = 100000;
 
   TRandom2 r(randomSeed);
-  startpoint[3] = r.Uniform(alpha+0.0001,M_PI/2);
+  startpoint[4] = r.Uniform(0.000001,M_PI/2);
 
-  std::cout << "startpoint of phi " << startpoint[3] << std::endl;
+  std::cout << "startpoint of Phi_eq " << startpoint[4] << std::endl;
 
   // Set the free variables to be minimized!
-  phimin->SetVariable(0,"m",     startpoint[0], minstep[0]);
-  phimin->SetVariable(1,"k1",    startpoint[1], minstep[1]);
-  phimin->SetVariable(2,"k2",    startpoint[2], minstep[2]);
-  phimin->SetLimitedVariable(3,"phi",   startpoint[3], minstep[3], alpha+0.0001, M_PI/2);
-  phimin->SetVariable(4,"alpha", startpoint[4], minstep[4]);
-  phimin->SetVariable(5,"hpoint",startpoint[5], minstep[5]);
+  phimin->SetVariable(0,"Ms",              startpoint[0], minstep[0]);
+  phimin->SetVariable(1,"K1",              startpoint[1], minstep[1]);
+  phimin->SetVariable(2,"K2",              startpoint[2], minstep[2]);
+  phimin->SetVariable(3,"Phi_H",           startpoint[3], minstep[3]);
+  phimin->SetLimitedVariable(4,"Phi_eq",   startpoint[4], minstep[4], 0.000001, M_PI/2);
+  phimin->SetVariable(5,"hpoint",          startpoint[5], minstep[5]);
 
 
   // do the minimization
@@ -142,7 +142,7 @@ double GetPhiFromH(const double *pars, const double hpoint){
 
   const double *xs = phimin->X();
 
-  return xs[3];
+  return xs[4];
 }
 
 //========================================================================
@@ -253,5 +253,24 @@ int main(int argc, char *argv[]){
 	group();
 	//printgroup();
 	plotdata();
+
+	const double Ms     = 1258.;
+	const double K1     = 1.3e6;
+	const double K2     = 20.1e3;
+	const double Phi_H  = 0.1;
+	const double Phi_eq = 0.1;
+	const double HPoint = 4000.;
+        const double pars[5] = {Ms,K1,K2,Phi_H,Phi_eq};
+        double phi = GetPhiFromH(pars,HPoint);
+        std::cout << "GetPhiFromH: " << phi << std::endl;
+	std::cout << "H: " << H(pars) << std::endl;
+
+	double H,F;
+
+        const double newpars[5] = {Ms,K1,K2,Phi_H,phi};
+	HvsF(newpars, &H,&F);
+        std::cout << "HvsF H: " << H << " F: " << F << std::endl;
+
+
 }
 
