@@ -262,15 +262,12 @@ double GetChi2ByTemp(const double *pars, int temperature){
 	std::vector<int>::iterator it;
 
 	const double P      = pars[0];
-	const double Ms0    = pars[1];
 	const double K1     = pars[2];
 	const double K2     = pars[3];
 
 
-	//const double Ms     = Ms0*(1-P*sqrt(temperature*temperature*temperature));
-	const double Ms     = Ms0;
-	//const double K1     = 13.2e6;
-	//const double K2     = 20.1e3;
+	const double Ms300  = 1258.;
+	const double Ms     = Ms300*(1-P*sqrt(temperature*temperature*temperature))/(1-P*5196.1524);
 
 	const double Phi_H  = 0.;
 	const double Phi_eq = M_PI/4;
@@ -331,11 +328,10 @@ int main(int argc, char *argv[]){
 	//printgroup();
 	plotdata();
 
-	const double P      = 0.;
-	const double Ms0    = 1258.;  
+	const double P      = 0.03887;
 	const double K1     = 13.2e6; 
 	const double K2     = 20.1e3; 
-	const double pars[4] = {P,Ms0,K1,K2};
+	const double pars[4] = {P,K1,K2};
 	GetChi2ByAll(pars);
 }
 
