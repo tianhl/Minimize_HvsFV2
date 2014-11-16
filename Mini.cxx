@@ -253,17 +253,25 @@ void plotdata(){
 
 //========================================================================
 
-void fitphi(int temperature){
+double GetChi2ByTemp(const double *pars, int temperature){
 	if(Group.find(temperature)==Group.end()){
 		std::cout << "there is no this temperature in data" << std::endl;
-		return ;
+		return 0.;
 	}
 	std::vector<int> idx = Group[temperature];
 	std::vector<int>::iterator it;
 
-	const double Ms     = 1258.;
-	const double K1     = 13.2e6;
-	const double K2     = 20.1e3;
+	const double P      = pars[0];
+	const double Ms0    = pars[1];
+	const double K1     = pars[2];
+	const double K2     = pars[3];
+
+
+	//const double Ms     = Ms0*(1-P*sqrt(temperature*temperature*temperature));
+	const double Ms     = Ms0;
+	//const double K1     = 13.2e6;
+	//const double K2     = 20.1e3;
+
 	const double Phi_H  = 0.;
 	const double Phi_eq = M_PI/4;
 
@@ -272,8 +280,8 @@ void fitphi(int temperature){
 	for(it=idx.begin();it!=idx.end();it++){
 		const double HPoint = Magneticfield[*it];
 
-		const double pars[5] = {Ms,K1,K2,Phi_H,Phi_eq};
-		double phi = GetPhiFromH(pars,HPoint);
+		const double phipars[5] = {Ms,K1,K2,Phi_H,Phi_eq};
+		double phi = GetPhiFromH(phipars,HPoint);
 
 		double H,F;
 
@@ -284,10 +292,30 @@ void fitphi(int temperature){
 
 	}
 
+	double chi2 = 0;
+	double diff = 0;
+	it=idx.begin();
 	for(uint32_t i = 0; i < fv.size(); i++){
 		std::cout << "fitting point H: " << hv[i] << " F: " << fv[i] << std::endl;
+		std::cout << "data point "<< *it << " H: " << Magneticfield[*it] << " F: " << Frequency[*it] << std::endl;
+		diff = Frequency[*it] - fv[i];
+		chi2 += (diff*diff)/fv[i];
+		it++;
 	}
+	std::cout << "Temperature: " << temperature << " Chi2: " << chi2 << std::endl;
+	return chi2;
 
+}
+
+
+double GetChi2ByAll(const double *pars){
+	std::map<int, std::vector<int> >::iterator mit;
+	double chi2 =0;
+	for(mit=Group.begin();mit != Group.end();mit++){
+		const double temperature   = mit->first;
+		chi2+=GetChi2ByTemp(pars, temperature);
+	}
+	return chi2;
 }
 
 int main(int argc, char *argv[]){
@@ -303,6 +331,11 @@ int main(int argc, char *argv[]){
 	//printgroup();
 	plotdata();
 
-	fitphi(300);
+	const double P      = 0.;
+	const double Ms0    = 1258.;  
+	const double K1     = 13.2e6; 
+	const double K2     = 20.1e3; 
+	const double pars[4] = {P,Ms0,K1,K2};
+	GetChi2ByAll(pars);
 }
 
