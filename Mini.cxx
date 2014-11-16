@@ -328,10 +328,13 @@ int main(int argc, char *argv[]){
 	//printgroup();
 	plotdata();
 
-	const double P      = 0.03887;
-	const double K1     = 13.2e6; 
-	const double K2     = 20.1e3; 
-	const double pars[4] = {P,K1,K2};
-	GetChi2ByAll(pars);
+	//const double P      = 2.6679e-5;
+	//const double K1     = 13.2e6; 
+	//const double K2     = 20.1e3; 
+	//const double pars[4] = {P,K1,K2};
+	//GetChi2ByAll(pars);
+	const double phipars[5] = {Ms,K1,K2,Phi_H,Phi_eq};
+	GetPhiFromH(phipar, hpoint);
+
 }
 
