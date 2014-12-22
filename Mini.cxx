@@ -358,31 +358,42 @@ void Getk1k2FromFixedTemperature(const double *pars, double temperature, double 
 
   TRandom2 r(randomSeed);
 
-  //while(true){
-  startpoint[2] = r.Uniform(k1low,k1up);
-  startpoint[3] = r.Uniform(k2low,k2up);
+  double chi2min = -100.;
 
-  std::cout << "startpoint of K1 " << startpoint[2] << std::endl;
-  std::cout << "startpoint of K2 " << startpoint[3] << std::endl;
+  while(true){
+	  startpoint[2] = r.Uniform(k1low,k1up);
+	  startpoint[3] = r.Uniform(k2low,k2up);
 
-  // Set the free variables to be minimized!
-  k1k2min->SetVariable(0,"P",               startpoint[0], minstep[0]);
-  k1k2min->SetVariable(1,"Ms",              startpoint[1], minstep[1]);
-  k1k2min->SetLimitedVariable(2,"K1",       startpoint[2], minstep[2], k1low, k1up);
-  k1k2min->SetLimitedVariable(3,"K2",       startpoint[3], minstep[3], k2low, k2up);
-  k1k2min->SetVariable(4,"Temperature",     startpoint[4], minstep[4]);
+	  std::cout << "startpoint of K1 " << startpoint[2] << std::endl;
+	  std::cout << "startpoint of K2 " << startpoint[3] << std::endl;
 
-
-  // do the minimization
-  k1k2min->Minimize();
-
-  const double *xs = k1k2min->X();
-  kpars[0] = xs[2];
-  kpars[1] = xs[3];
+	  // Set the free variables to be minimized!
+	  k1k2min->SetVariable(0,"P",               startpoint[0], minstep[0]);
+	  k1k2min->SetVariable(1,"Ms",              startpoint[1], minstep[1]);
+	  k1k2min->SetLimitedVariable(2,"K1",       startpoint[2], minstep[2], k1low, k1up);
+	  k1k2min->SetLimitedVariable(3,"K2",       startpoint[3], minstep[3], k2low, k2up);
+	  k1k2min->SetVariable(4,"Temperature",     startpoint[4], minstep[4]);
 
 
-  //	  if(abs(H(xs)-hpoint)<0.1)return xs[4];
-  // }
+	  // do the minimization
+	  k1k2min->Minimize();
+
+	  const double *xs = k1k2min->X();
+	  kpars[0] = xs[2];
+	  kpars[1] = xs[3];
+
+	  double newchi2 = GetChi2ByTemp(xs);
+	  double oldchi2 = 0.0;
+	  if(chi2min<0) chi2min=newchi2; 
+	  else{
+
+		  if(newchi2<chi2min){
+			  oldchi2 = chi2min;
+			  chi2min = newchi2;
+		  }
+		  if(abs(chi2min-oldchi2)<(oldchi2*0.1)) break;
+	  }
+  }
 }
 
 int main(int argc, char *argv[]){
