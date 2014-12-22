@@ -135,8 +135,8 @@ double GetPhiFromH(const double *pars, const double hpoint){
   while(true){
 	  startpoint[4] = r.Uniform(low,up);
 
-	  std::cout << "startpoint of Phi_eq " << startpoint[4] << std::endl;
-	  std::cout << "want to fit to H:    " << hpoint << std::endl;
+	  //std::cout << "startpoint of Phi_eq " << startpoint[4] << std::endl;
+	  //std::cout << "want to fit to H:    " << hpoint << std::endl;
 
 	  // Set the free variables to be minimized!
 	  phimin->SetVariable(0,"Ms",              startpoint[0], minstep[0]);
@@ -352,7 +352,7 @@ void Getk1k2FromFixedTemperature(const double *pars, double temperature, double 
   double k1up  = 3e7;
   double k2low = 0.0;
   double k2up  = 1e5;
-  double minstep[5]    = {0.0,  0.0,  1e5,  1e3, 0.0};
+  double minstep[5]    = {0.0,  0.0,  1e5,  1e4, 0.0};
   double startpoint[5] = {P,    Ms0,  K1,   K2, Temperature};
   int    randomSeed = time(NULL);
 
@@ -409,6 +409,8 @@ int main(int argc, char *argv[]){
 	//printgroup();
 	plotdata();
 
+	const int temperature      = 300;
+
 	const double P      = 2.6679e-5;
 	const double Ms300  = 1258.;
 	const double Ms0    = Ms300;
@@ -416,8 +418,8 @@ int main(int argc, char *argv[]){
 	const double K2     = 20.1e3; 
 	const double pars[4] = {P,Ms0,K1,K2};
 	double kpars[2];
-	Getk1k2FromFixedTemperature(pars, 150, kpars);
-	std::cout << "temperature " << 150 << " k1: " << kpars[0] << " k2: " << kpars[1] << std::endl;
+	Getk1k2FromFixedTemperature(pars, temperature, kpars);
+	std::cout << "temperature " << temperature << " k1: " << kpars[0] << " k2: " << kpars[1] << std::endl;
 
 }
 
