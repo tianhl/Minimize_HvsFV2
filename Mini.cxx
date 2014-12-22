@@ -21,6 +21,7 @@
 std::vector<int> Temperature;
 std::vector<double> Magneticfield;
 std::vector<double> Frequency;
+std::vector<double> Phi_h;
 std::map<int, std::vector<int> > Group;
 
 //========================================================================
@@ -163,20 +164,23 @@ void readfile(std::string& datafilename){
 
 	std::string databuff;
 	getline(datafile,databuff);
+	std::cout << "read line: " << databuff << std::endl; 
 
 	while(getline(datafile,databuff)){
 		std::vector<std::string> substring;
+		std::cout << "read line: " << databuff << std::endl; 
 		boost::split( substring, databuff, boost::is_any_of( ";" ), boost::token_compress_on );
 		Temperature.push_back(boost::lexical_cast<int>(substring[0]));
 		Magneticfield.push_back(boost::lexical_cast<double>(substring[1]));
-		Frequency.push_back(boost::lexical_cast<double>(substring[2]));
+		Frequency.push_back(boost::lexical_cast<double>(substring[2])*1e9);
+		Phi_h.push_back(boost::lexical_cast<double>(substring[3]));
 	}
 }
 
 void printdata(){
 	int size = Temperature.size();
 	for(int i = 0; i < size; i++){
-		std::cout << i << " " << Temperature[i] << ";" << Magneticfield[i] << ";" << Frequency[i] << std::endl;
+		std::cout << i << " " << Temperature[i] << ";" << Magneticfield[i] << ";" << Frequency[i] << ";" << Phi_h[i] << std::endl;
 	}
 }
 
@@ -262,20 +266,21 @@ double GetChi2ByTemp(const double *pars, int temperature){
 	std::vector<int>::iterator it;
 
 	const double P      = pars[0];
+	const double Ms300  = pars[1];
 	const double K1     = pars[2];
 	const double K2     = pars[3];
 
 
-	const double Ms300  = 1258.;
+	//const double Ms300  = 1258.;
 	const double Ms     = Ms300*(1-P*sqrt(temperature*temperature*temperature))/(1-P*5196.1524);
 
-	const double Phi_H  = 0.;
 	const double Phi_eq = M_PI/4;
 
 	std::vector<double> hv;
 	std::vector<double> fv;
 	for(it=idx.begin();it!=idx.end();it++){
 		const double HPoint = Magneticfield[*it];
+	        const double Phi_H  = Phi_h[*it];
 
 		const double phipars[5] = {Ms,K1,K2,Phi_H,Phi_eq};
 		double phi = GetPhiFromH(phipars,HPoint);
@@ -293,10 +298,10 @@ double GetChi2ByTemp(const double *pars, int temperature){
 	double diff = 0;
 	it=idx.begin();
 	for(uint32_t i = 0; i < fv.size(); i++){
-		std::cout << "fitting point H: " << hv[i] << " F: " << fv[i] << std::endl;
-		std::cout << "data point "<< *it << " H: " << Magneticfield[*it] << " F: " << Frequency[*it] << std::endl;
 		diff = Frequency[*it] - fv[i];
 		chi2 += (diff*diff)/fv[i];
+		std::cout << "data point "<< *it << " H: " << Magneticfield[*it] << " F: " << Frequency[*it] << std::endl;
+		std::cout << "fitting point H: " << hv[i] << " F: " << fv[i] << " diff: " << diff << " chi2: " << (diff*diff)/fv[i] << std::endl;
 		it++;
 	}
 	std::cout << "Temperature: " << temperature << " Chi2: " << chi2 << std::endl;
@@ -308,10 +313,11 @@ double GetChi2ByTemp(const double *pars, int temperature){
 double GetChi2ByAll(const double *pars){
 	std::map<int, std::vector<int> >::iterator mit;
 	double chi2 =0;
-	for(mit=Group.begin();mit != Group.end();mit++){
-		const double temperature   = mit->first;
-		chi2+=GetChi2ByTemp(pars, temperature);
-	}
+	//for(mit=Group.begin();mit != Group.end();mit++){
+	//	const double temperature   = mit->first;
+	//	chi2+=GetChi2ByTemp(pars, temperature);
+	//}
+	GetChi2ByTemp(pars, 150);
 	return chi2;
 }
 
@@ -329,23 +335,12 @@ int main(int argc, char *argv[]){
 	plotdata();
 
 	const double P      = 2.6679e-5;
+	const double Ms300  = 1258.;
+	const double Ms0    = Ms300;
 	const double K1     = 13.2e6; 
 	const double K2     = 20.1e3; 
-	const double Phi_H  = 0.;
-	const double Phi_eq = M_PI/4;
-	//const double pars[4] = {P,K1,K2};
-	//GetChi2ByAll(pars);
-	const double Ms300  = 1258.;
-	const int temperature   = 300;
-	const double Ms     = Ms300*(1-P*sqrt(temperature*temperature*temperature))/(1-P*5196.1524);
-	const double phipars[5] = {Ms,K1,K2,Phi_H,Phi_eq};
-	const double hpoint = 4000.;
-	double phi = GetPhiFromH(phipars, hpoint);
-
-	const double newpars[5] = {Ms,K1,K2,Phi_H,phi};
-	double H,F;
-	HvsF(newpars, &H,&F);
-	std::cout << "fitting point H: " << H << " F: " << F << std::endl;
+	const double pars[4] = {P,Ms0,K1,K2};
+	GetChi2ByAll(pars);
 
 }
 
