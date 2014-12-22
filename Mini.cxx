@@ -328,13 +328,24 @@ int main(int argc, char *argv[]){
 	//printgroup();
 	plotdata();
 
-	//const double P      = 2.6679e-5;
-	//const double K1     = 13.2e6; 
-	//const double K2     = 20.1e3; 
+	const double P      = 2.6679e-5;
+	const double K1     = 13.2e6; 
+	const double K2     = 20.1e3; 
+	const double Phi_H  = 0.;
+	const double Phi_eq = M_PI/4;
 	//const double pars[4] = {P,K1,K2};
 	//GetChi2ByAll(pars);
+	const double Ms300  = 1258.;
+	const int temperature   = 300;
+	const double Ms     = Ms300*(1-P*sqrt(temperature*temperature*temperature))/(1-P*5196.1524);
 	const double phipars[5] = {Ms,K1,K2,Phi_H,Phi_eq};
-	GetPhiFromH(phipar, hpoint);
+	const double hpoint = 4000.;
+	double phi = GetPhiFromH(phipars, hpoint);
+
+	const double newpars[5] = {Ms,K1,K2,Phi_H,phi};
+	double H,F;
+	HvsF(newpars, &H,&F);
+	std::cout << "fitting point H: " << H << " F: " << F << std::endl;
 
 }
 
