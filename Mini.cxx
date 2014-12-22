@@ -257,18 +257,19 @@ void plotdata(){
 
 //========================================================================
 
-double GetChi2ByTemp(const double *pars, int temperature){
+double GetChi2ByTemp(const double *pars){
+	const double P        = pars[0];
+	const double Ms300    = pars[1];
+	const double K1       = pars[2];
+	const double K2       = pars[3];
+	const int temperature = int(pars[4]);
+
 	if(Group.find(temperature)==Group.end()){
-		std::cout << "there is no this temperature in data" << std::endl;
+		std::cout << "there is no this temperature " << temperature << " in data" << std::endl;
 		return 0.;
 	}
 	std::vector<int> idx = Group[temperature];
 	std::vector<int>::iterator it;
-
-	const double P      = pars[0];
-	const double Ms300  = pars[1];
-	const double K1     = pars[2];
-	const double K2     = pars[3];
 
 
 	//const double Ms300  = 1258.;
@@ -312,74 +313,77 @@ double GetChi2ByTemp(const double *pars, int temperature){
 }
 
 
-double GetChi2ByAll(const double *pars){
-	std::map<int, std::vector<int> >::iterator mit;
-	double chi2 =0;
-	//for(mit=Group.begin();mit != Group.end();mit++){
-	//	const double temperature   = mit->first;
-	//	chi2+=GetChi2ByTemp(pars, temperature);
-	//}
-	chi2=GetChi2ByTemp(pars, 150);
-	return chi2;
-}
-
-
-//double FindMinChi2(const double *pars, const double hpoint){
-//  double Ms     = pars[0];  
-//  double K1     = pars[1]; 
-//  double K2     = pars[2]; 
-//  double Phi_H  = pars[3]; 
-//  double Phi_eq = pars[4]; 
-//
-//
-//  ROOT::Math::Functor funH(&GetChi2ByAll,6); 
-//
-//  // initialize minimizer
-//  const std::string minName = "Minuit2";
-//  const std::string algName = "";
-//
-//  ROOT::Math::Minimizer* phimin = 
-//    ROOT::Math::Factory::CreateMinimizer(minName.c_str(), algName.c_str());
-//
-//  phimin->SetMaxFunctionCalls(1000000); 
-//  phimin->SetMaxIterations(10000);  
-//  phimin->SetTolerance(0.1);
-//  phimin->SetPrintLevel(0);
-//  phimin->SetFunction(funH);
-//
-//  // min parameters
-//  //double low = M_PI/4;
-//  double low = 0.0001;
-//  double up  = M_PI/2;
-//  double minstep[6]    = {0.0,  0.0,  0.0,  0.0,    0.1,     0.0};
-//  double startpoint[6] = {Ms,   K1,   K2,   Phi_H,  Phi_eq,  hpoint};
-//  int    randomSeed = time(NULL);
-//
-//  TRandom2 r(randomSeed);
-//
-//  while(true){
-//	  startpoint[4] = r.Uniform(low,up);
-//
-//	  std::cout << "startpoint of Phi_eq " << startpoint[4] << std::endl;
-//	  std::cout << "want to fit to H:    " << hpoint << std::endl;
-//
-//	  // Set the free variables to be minimized!
-//	  phimin->SetVariable(0,"Ms",              startpoint[0], minstep[0]);
-//	  phimin->SetVariable(1,"K1",              startpoint[1], minstep[1]);
-//	  phimin->SetVariable(2,"K2",              startpoint[2], minstep[2]);
-//	  phimin->SetVariable(3,"Phi_H",           startpoint[3], minstep[3]);
-//	  phimin->SetLimitedVariable(4,"Phi_eq",   startpoint[4], minstep[4], low, up);
-//	  phimin->SetVariable(5,"hpoint",          startpoint[5], minstep[5]);
-//
-//
-//	  // do the minimization
-//	  phimin->Minimize();
-//
-//	  const double *xs = phimin->X();
-//
-//	  if(abs(H(xs)-hpoint)<0.1)return xs[4];
-//  }
+//double GetChi2ByAll(const double *pars){
+//	std::map<int, std::vector<int> >::iterator mit;
+//	double chi2 =0;
+//	//for(mit=Group.begin();mit != Group.end();mit++){
+//	//	const double temperature   = mit->first;
+//	//	chi2+=GetChi2ByTemp(pars, temperature);
+//	//}
+//	chi2=GetChi2ByTemp(pars, 150);
+//	return chi2;
 //}
+
+
+void Getk1k2FromFixedTemperature(const double *pars, double temperature, double *kpars){
+  double P           = pars[0];  
+  double Ms0         = pars[1];  
+  double K1          = pars[2]; 
+  double K2          = pars[3]; 
+  double Temperature = temperature; 
+
+  ROOT::Math::Functor funH(&GetChi2ByTemp,5); 
+
+  // initialize minimizer
+  const std::string minName = "Minuit2";
+  const std::string algName = "";
+
+  ROOT::Math::Minimizer* k1k2min = 
+    ROOT::Math::Factory::CreateMinimizer(minName.c_str(), algName.c_str());
+
+  k1k2min->SetMaxFunctionCalls(1000000); 
+  k1k2min->SetMaxIterations(10000);  
+  k1k2min->SetTolerance(100);
+  k1k2min->SetPrintLevel(0);
+  k1k2min->SetFunction(funH);
+
+  // min parameters
+  double k1low = 1e7;
+  double k1up  = 3e7;
+  double k2low = 0.0;
+  double k2up  = 1e5;
+  double minstep[5]    = {0.0,  0.0,  1e5,  1e3, 0.0};
+  double startpoint[5] = {P,    Ms0,  K1,   K2, Temperature};
+  int    randomSeed = time(NULL);
+
+  TRandom2 r(randomSeed);
+
+  //while(true){
+  startpoint[2] = r.Uniform(k1low,k1up);
+  startpoint[3] = r.Uniform(k2low,k2up);
+
+  std::cout << "startpoint of K1 " << startpoint[2] << std::endl;
+  std::cout << "startpoint of K2 " << startpoint[3] << std::endl;
+
+  // Set the free variables to be minimized!
+  k1k2min->SetVariable(0,"P",               startpoint[0], minstep[0]);
+  k1k2min->SetVariable(1,"Ms",              startpoint[1], minstep[1]);
+  k1k2min->SetLimitedVariable(2,"K1",       startpoint[2], minstep[2], k1low, k1up);
+  k1k2min->SetLimitedVariable(3,"K2",       startpoint[3], minstep[3], k2low, k2up);
+  k1k2min->SetVariable(4,"Temperature",     startpoint[4], minstep[4]);
+
+
+  // do the minimization
+  k1k2min->Minimize();
+
+  const double *xs = k1k2min->X();
+  kpars[0] = xs[2];
+  kpars[1] = xs[3];
+
+
+  //	  if(abs(H(xs)-hpoint)<0.1)return xs[4];
+  // }
+}
 
 int main(int argc, char *argv[]){
 	if(argc != 2){
@@ -400,8 +404,9 @@ int main(int argc, char *argv[]){
 	const double K1     = 13.2e6; 
 	const double K2     = 20.1e3; 
 	const double pars[4] = {P,Ms0,K1,K2};
-	double totalchi2 = GetChi2ByAll(pars);
-	std::cout << "total chi2: " << totalchi2 << std::endl;
+	double kpars[2];
+	Getk1k2FromFixedTemperature(pars, 150, kpars);
+	std::cout << "temperature " << 150 << " k1: " << kpars[0] << " k2: " << kpars[1] << std::endl;
 
 }
 
