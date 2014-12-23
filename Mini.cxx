@@ -24,6 +24,10 @@ std::vector<double> Frequency;
 std::vector<double> Phi_h;
 std::map<int, std::vector<int> > Group;
 
+double templist[4];
+double chi2list[4];
+double k1list[4];
+
 //========================================================================
 double H(const double *xx)
 {
@@ -303,29 +307,18 @@ double GetChi2ByTemp(const double *pars){
 	for(uint32_t i = 0; i < fv.size(); i++){
 		diff = Frequency[*it] - fv[i];
 		chi2 += (diff*diff)/fv[i];
-		std::cout << "data point "<< *it << " H: " << Magneticfield[*it] << " F: " << Frequency[*it] << std::endl;
-		std::cout << "fitting point H: " << hv[i] << " F: " << fv[i] << " @phi:" << pv[i] << " diff: " << diff << " chi2: " << (diff*diff)/fv[i] << std::endl;
+		//std::cout << "data point "<< *it << " H: " << Magneticfield[*it] << " F: " << Frequency[*it] << std::endl;
+		//std::cout << "fitting point H: " << hv[i] << " F: " << fv[i] << " @phi:" << pv[i] << " diff: " << diff << " chi2: " << (diff*diff)/fv[i] << std::endl;
 		it++;
 	}
-	std::cout << "Temperature: " << temperature << " Chi2: " << chi2 << std::endl;
+	//std::cout << "Temperature: " << temperature << " Chi2: " << chi2 << std::endl;
 	return chi2;
 
 }
 
 
-//double GetChi2ByAll(const double *pars){
-//	std::map<int, std::vector<int> >::iterator mit;
-//	double chi2 =0;
-//	//for(mit=Group.begin();mit != Group.end();mit++){
-//	//	const double temperature   = mit->first;
-//	//	chi2+=GetChi2ByTemp(pars, temperature);
-//	//}
-//	chi2=GetChi2ByTemp(pars, 150);
-//	return chi2;
-//}
 
-
-void Getk1k2FromFixedTemperature(const double *pars, double temperature, double *kpars){
+double Getk1k2FromFixedTemperature(const double *pars, double temperature, double *kpars){
   double P           = pars[0];  
   double Ms0         = pars[1];  
   double K1          = pars[2]; 
@@ -350,9 +343,8 @@ void Getk1k2FromFixedTemperature(const double *pars, double temperature, double 
   // min parameters
   double k1low = 1e7;
   double k1up  = 3e7;
-  double k2low = 0.0;
-  double k2up  = 1e5;
-  double minstep[5]    = {0.0,  0.0,  1e5,  1e4, 0.0};
+
+  double minstep[5]    = {0.0,  0.0,  1e5,  0.0, 0.0};
   double startpoint[5] = {P,    Ms0,  K1,   K2, Temperature};
   int    randomSeed = time(NULL);
 
@@ -360,9 +352,12 @@ void Getk1k2FromFixedTemperature(const double *pars, double temperature, double 
 
   double chi2min = -100.;
 
+  int loop = 0;
+
   while(true){
+	  loop++;
 	  startpoint[2] = r.Uniform(k1low,k1up);
-	  startpoint[3] = r.Uniform(k2low,k2up);
+	  //startpoint[3] = r.Uniform(k2low,k2up);
 
 	  std::cout << "startpoint of K1 " << startpoint[2] << std::endl;
 	  std::cout << "startpoint of K2 " << startpoint[3] << std::endl;
@@ -371,7 +366,7 @@ void Getk1k2FromFixedTemperature(const double *pars, double temperature, double 
 	  k1k2min->SetVariable(0,"P",               startpoint[0], minstep[0]);
 	  k1k2min->SetVariable(1,"Ms",              startpoint[1], minstep[1]);
 	  k1k2min->SetLimitedVariable(2,"K1",       startpoint[2], minstep[2], k1low, k1up);
-	  k1k2min->SetLimitedVariable(3,"K2",       startpoint[3], minstep[3], k2low, k2up);
+	  k1k2min->SetVariable(3,"K2",              startpoint[3], minstep[3]);
 	  k1k2min->SetVariable(4,"Temperature",     startpoint[4], minstep[4]);
 
 
@@ -391,9 +386,26 @@ void Getk1k2FromFixedTemperature(const double *pars, double temperature, double 
 			  oldchi2 = chi2min;
 			  chi2min = newchi2;
 		  }
-		  if(abs(chi2min-oldchi2)<(oldchi2*0.1)) break;
+		  if((abs(chi2min-oldchi2)<(oldchi2*0.01))and(loop>20)) break;
 	  }
   }
+  return chi2min;
+}
+
+void GetChi2ByAll(const double *pars){
+	std::map<int, std::vector<int> >::iterator mit;
+	double chi2 =0;
+	double kpars[2];
+	int idx=0;
+	for(mit=Group.begin();mit != Group.end();mit++){
+		const double temperature   = mit->first;
+		chi2+=Getk1k2FromFixedTemperature(pars, temperature, kpars);
+	        std::cout << "temperature " << temperature << " k1: " << kpars[0] << " chi2: " << chi2 << std::endl;
+	        templist[idx]=temperature;
+	        chi2list[idx]=chi2;
+	        k1list[idx]=kpars[0];	
+		idx++;
+	}
 }
 
 int main(int argc, char *argv[]){
@@ -409,17 +421,21 @@ int main(int argc, char *argv[]){
 	//printgroup();
 	plotdata();
 
-	const int temperature      = 300;
+	//const int temperature      = 300;
 
 	const double P      = 2.6679e-5;
 	const double Ms300  = 1258.;
 	const double Ms0    = Ms300;
 	const double K1     = 13.2e6; 
-	const double K2     = 20.1e3; 
+	const double K2     = 150; 
 	const double pars[4] = {P,Ms0,K1,K2};
-	double kpars[2];
-	Getk1k2FromFixedTemperature(pars, temperature, kpars);
-	std::cout << "temperature " << temperature << " k1: " << kpars[0] << " k2: " << kpars[1] << std::endl;
+	//double kpars[2];
+	//double chi2 = Getk1k2FromFixedTemperature(pars, temperature, kpars);
+	//std::cout << "temperature " << temperature << " k1: " << kpars[0] << " chi2: " << chi2 << std::endl;
+        GetChi2ByAll(pars);
+	for(int i = 0; i< 4; i++){
+		std::cout <<  " temperature " << templist[i] << " chi2: " << chi2list[i] << " k1: " << k1list[i] << std::endl;
+	}
 
 }
 
