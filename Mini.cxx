@@ -415,8 +415,8 @@ double GetPFromData(const double *pars){
 
 	ROOT::Math::Functor funP(&GetChi2ByAll,4); 
 
-	pmin->SetMaxFunctionCalls(10); 
-	pmin->SetMaxIterations(1);  
+	pmin->SetMaxFunctionCalls(100); 
+	pmin->SetMaxIterations(10);  
 	pmin->SetTolerance(100);
 	pmin->SetPrintLevel(0);
 	pmin->SetFunction(funP);
@@ -436,41 +436,44 @@ double GetPFromData(const double *pars){
 	int loop = 0;
 	double ppar = 0;
 
-	while(true){
-		loop++;
-		startpoint[0] = r.Uniform(plow,pup);
-		std::cout << "start P @ " << startpoint[0] << std::endl;
+	//while(true){
+	loop++;
+	startpoint[0] = r.Uniform(plow,pup);
+	std::cout << "start P @ " << startpoint[0] << std::endl;
 
-		// Set the free variables to be minimized!
-		pmin->SetLimitedVariable(0,"P",        startpoint[0], minstep[0], plow, pup);
-		pmin->SetVariable(1,"Ms",              startpoint[1], minstep[1]);
-		pmin->SetVariable(2,"K1",              startpoint[2], minstep[2]);
-		pmin->SetVariable(3,"K2",              startpoint[3], minstep[3]);
+	// Set the free variables to be minimized!
+	pmin->SetLimitedVariable(0,"P",        startpoint[0], minstep[0], plow, pup);
+	pmin->SetVariable(1,"Ms",              startpoint[1], minstep[1]);
+	pmin->SetVariable(2,"K1",              startpoint[2], minstep[2]);
+	pmin->SetVariable(3,"K2",              startpoint[3], minstep[3]);
 
 
-		// do the minimization
-		pmin->Minimize();
+	// do the minimization
+	pmin->Minimize();
 
-		const double *xs = pmin->X();
+	const double *xs = pmin->X();
 
-		double newchi2 = GetChi2ByAll(xs);
-		double oldchi2 = 0.0;
-		std::cout << " this chi2: " << newchi2 << std::endl;
-		if(chi2min<0) chi2min=newchi2; 
-		else{
+	//double newchi2 = GetChi2ByAll(xs);
+	//double oldchi2 = 0.0;
+	//std::cout << " this chi2: " << newchi2 << std::endl;
+	//if(chi2min<0) chi2min=newchi2; 
+	//else{
 
-			if(newchi2<chi2min){
-				oldchi2 = chi2min;
-				chi2min = newchi2;
-				ppar=xs[0];
-				std::cout << "old chi2: " << oldchi2 << " min chi2: " << chi2min << std::endl;
-			}
-			//if((abs(chi2min-oldchi2)<(oldchi2*0.01))and(loop>20)) break;
-			if((abs(chi2min-oldchi2)<(oldchi2*0.1))and(loop>5)) break;
-		}
-	}
-	std::cout << "find P chi2: " << chi2min << " P " << ppar << std::endl;
-	return chi2min;
+	//	if(newchi2<chi2min){
+	//		oldchi2 = chi2min;
+	//		chi2min = newchi2;
+	//		ppar=xs[0];
+	//		std::cout << "old chi2: " << oldchi2 << " min chi2: " << chi2min << std::endl;
+	//	}
+	//	//if((abs(chi2min-oldchi2)<(oldchi2*0.01))and(loop>20)) break;
+	//	if((abs(chi2min-oldchi2)<(oldchi2*0.1))and(loop>5)) break;
+	//}
+	//}
+	ppar=xs[0];
+	//std::cout << "find P chi2: " << chi2min << " P " << ppar << std::endl;
+	std::cout << "find  P " << ppar << std::endl;
+	return 0;
+	//return chi2min;
 }
 
 int main(int argc, char *argv[]){
